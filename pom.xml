@@ -38,17 +38,9 @@
 
         <!-- JEXL expression evaluation (used by ExpressionValueLoader) -->
         <dependency>
-            <groupId>commons-jexl</groupId>
+            <groupId>org.apache.commons</groupId>
             <artifactId>commons-jexl</artifactId>
             <version>2.1.1</version>
-        </dependency>
-
-        <!-- Lombok -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.30</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- Test -->
@@ -69,6 +61,7 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+
                 </configuration>
             </plugin>
             <plugin>

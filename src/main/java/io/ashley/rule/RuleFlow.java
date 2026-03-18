@@ -4,8 +4,6 @@ import io.ashley.core.RuleExecutable;
 import io.ashley.core.RuleExpression;
 import io.ashley.core.RuleItem;
 import io.ashley.core.RuleResult;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.LinkedHashMap;
 
@@ -20,9 +18,10 @@ public class RuleFlow implements RuleExecutable {
     private RuleResult closestBlockedRuleResult;
     private RuleResult ruleResult = new RuleResult();
 
-    @Setter
-    @Getter
     private String name = "";
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
     @Override
     public boolean execute() throws RuleApplyingException {

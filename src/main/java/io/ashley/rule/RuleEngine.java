@@ -5,8 +5,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import io.ashley.core.*;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -30,35 +28,41 @@ public class RuleEngine {
         return this.nestedDeepNum.incrementAndGet();
     }
 
-    @Getter
     private Result result;
 
+    public Result getResult() { return this.result; }
+
     public class Result {
-        @Getter @Setter
         private Boolean hasPassed;
-
-        @Getter @Setter
         private String conclusionBrief = "";
-
-        @Getter @Setter
         private RuleResult closestBlockedRuleResult;
-
-        @Getter @Setter
         private String conclusionJson = "";
-
-        @Getter @Setter
         private String conclusionBriefJson = "";
-
-        @Getter @Setter
         private Map<String, Object> extraInfo = new HashMap<>();
+
+        public Boolean getHasPassed() { return hasPassed; }
+        public void setHasPassed(Boolean hasPassed) { this.hasPassed = hasPassed; }
+
+        public String getConclusionBrief() { return conclusionBrief; }
+        public void setConclusionBrief(String conclusionBrief) { this.conclusionBrief = conclusionBrief; }
+
+        public RuleResult getClosestBlockedRuleResult() { return closestBlockedRuleResult; }
+        public void setClosestBlockedRuleResult(RuleResult r) { this.closestBlockedRuleResult = r; }
+
+        public String getConclusionJson() { return conclusionJson; }
+        public void setConclusionJson(String conclusionJson) { this.conclusionJson = conclusionJson; }
+
+        public String getConclusionBriefJson() { return conclusionBriefJson; }
+        public void setConclusionBriefJson(String conclusionBriefJson) { this.conclusionBriefJson = conclusionBriefJson; }
+
+        public Map<String, Object> getExtraInfo() { return extraInfo; }
+        public void setExtraInfo(Map<String, Object> extraInfo) { this.extraInfo = extraInfo; }
 
         @Override
         public String toString() {
-            return "Result{" +
-                    "hasPassed=" + hasPassed +
+            return "Result{hasPassed=" + hasPassed +
                     ", conclusionBrief='" + conclusionBrief + '\'' +
-                    ", conclusionJson='" + conclusionJson + '\'' +
-                    '}';
+                    ", conclusionJson='" + conclusionJson + "'}";
         }
     }
 
@@ -88,13 +92,10 @@ public class RuleEngine {
             JsonObject jsonObject = gson.fromJson(ruleFlowConfig, JsonObject.class);
 
             if (jsonObject.has("case_default")) {
-                JsonArray itemsJSArray = jsonObject.getAsJsonArray("case_default");
-                this.buildRuleFlow(itemsJSArray, ruleItemConfigLoader, true);
+                this.buildRuleFlow(jsonObject.getAsJsonArray("case_default"), ruleItemConfigLoader, true);
             }
-
             if (jsonObject.has("case_other")) {
-                JsonArray itemsJSArray = jsonObject.getAsJsonArray("case_other");
-                this.buildRuleFlow(itemsJSArray, ruleItemConfigLoader, false);
+                this.buildRuleFlow(jsonObject.getAsJsonArray("case_other"), ruleItemConfigLoader, false);
             }
         } catch (Exception e) {
             throw new RuleSetupException(e.toString());
@@ -113,56 +114,35 @@ public class RuleEngine {
             if (ruleType.equals("rule")) {
                 RuleItem ruleItem = this.parseRuleFromJsonObject(itemObject, ruleItemConfigLoader);
                 if (itemObject.has("and_flow")) {
-                    JsonArray ruleItemJsonArray = itemObject.getAsJsonArray("and_flow");
-                    RuleExpression andRuleExpression = parseItemsFromJsonObject(ruleItemJsonArray, AndRuleExpression.class, ruleItemConfigLoader);
-                    if (isDefaultCase) {
-                        ruleFlow.when(ruleItem, andRuleExpression);
-                    } else {
-                        andRuleExpression.add(ruleItem);
-                        ruleFlow.otherCase(andRuleExpression);
-                    }
+                    RuleExpression andExpr = parseItemsFromJsonObject(
+                            itemObject.getAsJsonArray("and_flow"), AndRuleExpression.class, ruleItemConfigLoader);
+                    if (isDefaultCase) ruleFlow.when(ruleItem, andExpr);
+                    else { andExpr.add(ruleItem); ruleFlow.otherCase(andExpr); }
                 } else {
-                    if (isDefaultCase) {
-                        ruleFlow.when(ruleItem, ruleItem);
-                    } else {
-                        ruleFlow.otherCase(ruleItem);
-                    }
+                    if (isDefaultCase) ruleFlow.when(ruleItem, ruleItem);
+                    else ruleFlow.otherCase(ruleItem);
                 }
             } else if (ruleType.equals("and_expression")) {
-                RuleExpression andRuleExpression = this.parseAndExpressionFromJsonObject(itemObject, ruleItemConfigLoader);
+                RuleExpression andExpr = this.parseAndExpressionFromJsonObject(itemObject, ruleItemConfigLoader);
                 if (itemObject.has("and_flow")) {
-                    JsonArray ruleItemJsonArray = itemObject.getAsJsonArray("and_flow");
-                    RuleExpression secondAndRuleExpression = parseItemsFromJsonObject(ruleItemJsonArray, AndRuleExpression.class, ruleItemConfigLoader);
-                    if (isDefaultCase) {
-                        ruleFlow.when(andRuleExpression, secondAndRuleExpression);
-                    } else {
-                        andRuleExpression.add(secondAndRuleExpression);
-                        ruleFlow.otherCase(andRuleExpression);
-                    }
+                    RuleExpression secondAnd = parseItemsFromJsonObject(
+                            itemObject.getAsJsonArray("and_flow"), AndRuleExpression.class, ruleItemConfigLoader);
+                    if (isDefaultCase) ruleFlow.when(andExpr, secondAnd);
+                    else { andExpr.add(secondAnd); ruleFlow.otherCase(andExpr); }
                 } else {
-                    if (isDefaultCase) {
-                        ruleFlow.when(andRuleExpression, andRuleExpression);
-                    } else {
-                        ruleFlow.otherCase(andRuleExpression);
-                    }
+                    if (isDefaultCase) ruleFlow.when(andExpr, andExpr);
+                    else ruleFlow.otherCase(andExpr);
                 }
             } else if (ruleType.equals("or_expression")) {
-                RuleExpression orRuleExpression = this.parseOrExpressionFromJsonObject(itemObject, ruleItemConfigLoader);
+                RuleExpression orExpr = this.parseOrExpressionFromJsonObject(itemObject, ruleItemConfigLoader);
                 if (itemObject.has("and_flow")) {
-                    JsonArray ruleItemJsonArray = itemObject.getAsJsonArray("and_flow");
-                    RuleExpression secondAndRuleExpression = parseItemsFromJsonObject(ruleItemJsonArray, AndRuleExpression.class, ruleItemConfigLoader);
-                    if (isDefaultCase) {
-                        ruleFlow.when(orRuleExpression, secondAndRuleExpression);
-                    } else {
-                        secondAndRuleExpression.add(orRuleExpression);
-                        ruleFlow.otherCase(secondAndRuleExpression);
-                    }
+                    RuleExpression secondAnd = parseItemsFromJsonObject(
+                            itemObject.getAsJsonArray("and_flow"), AndRuleExpression.class, ruleItemConfigLoader);
+                    if (isDefaultCase) ruleFlow.when(orExpr, secondAnd);
+                    else { secondAnd.add(orExpr); ruleFlow.otherCase(secondAnd); }
                 } else {
-                    if (isDefaultCase) {
-                        ruleFlow.when(orRuleExpression, orRuleExpression);
-                    } else {
-                        ruleFlow.otherCase(orRuleExpression);
-                    }
+                    if (isDefaultCase) ruleFlow.when(orExpr, orExpr);
+                    else ruleFlow.otherCase(orExpr);
                 }
             }
         }
@@ -177,36 +157,27 @@ public class RuleEngine {
         if (this.ruleFlow == null) {
             throw new NotInitializedException("RuleEngine has not been initialized!");
         }
-
         if (this.handleValueException != null)
             throw this.handleValueException;
 
         boolean hasPassed = this.ruleFlow.execute();
 
         this.result = new Result();
-        this.result.conclusionJson = this.ruleFlow.getRuleResult().toJson();
-        this.result.conclusionBrief = this.ruleFlow.getRuleResult().toBriefString();
+        this.result.conclusionJson      = this.ruleFlow.getRuleResult().toJson();
+        this.result.conclusionBrief     = this.ruleFlow.getRuleResult().toBriefString();
         this.result.conclusionBriefJson = this.ruleFlow.getRuleResult().toBriefJson().toString();
-        this.result.hasPassed = hasPassed;
+        this.result.hasPassed           = hasPassed;
         this.result.closestBlockedRuleResult = this.ruleFlow.getClosestBlockedRuleResult();
 
         return hasPassed;
-    }
-
-    public Result getResult() {
-        return this.result;
     }
 
     private RuleExpression parseItemsFromJsonObject(JsonArray ruleItemJsonArray,
             Class<? extends RuleExpression> ruleExpressionClass,
             RuleItemConfigLoader ruleItemConfigLoader) throws ClassNotFoundException, NotSupportedException {
 
-        RuleExpression ruleExpression;
-        if (ruleExpressionClass == AndRuleExpression.class) {
-            ruleExpression = new AndRuleExpression();
-        } else {
-            ruleExpression = new OrRuleExpression();
-        }
+        RuleExpression ruleExpression = ruleExpressionClass == AndRuleExpression.class
+                ? new AndRuleExpression() : new OrRuleExpression();
 
         Iterator<JsonElement> iter = ruleItemJsonArray.iterator();
         while (iter.hasNext()) {
@@ -216,13 +187,11 @@ public class RuleEngine {
             if (ruleType.equals("rule")) {
                 RuleItem ruleItem = this.parseRuleFromJsonObject(ruleItemJson, ruleItemConfigLoader);
                 if (ruleItemJson.has("and_flow")) {
-                    JsonArray ruleAndFlowJsonArray = ruleItemJson.getAsJsonArray("and_flow");
-                    RuleExpression andRuleExpression = parseItemsFromJsonObject(ruleAndFlowJsonArray, AndRuleExpression.class, ruleItemConfigLoader);
-                    if (andRuleExpression == null) {
-                        andRuleExpression = new AndRuleExpression();
-                    }
-                    andRuleExpression.add(ruleItem);
-                    ruleExpression.add(andRuleExpression);
+                    RuleExpression andExpr = parseItemsFromJsonObject(
+                            ruleItemJson.getAsJsonArray("and_flow"), AndRuleExpression.class, ruleItemConfigLoader);
+                    if (andExpr == null) andExpr = new AndRuleExpression();
+                    andExpr.add(ruleItem);
+                    ruleExpression.add(andExpr);
                 } else {
                     ruleExpression.add(ruleItem);
                 }
@@ -232,7 +201,6 @@ public class RuleEngine {
                 ruleExpression.add(this.parseOrExpressionFromJsonObject(ruleItemJson, ruleItemConfigLoader));
             }
         }
-
         return ruleExpression;
     }
 
@@ -240,25 +208,21 @@ public class RuleEngine {
             throws ClassNotFoundException, NotSupportedException {
 
         String ruleItemConfigId = itemObject.get("rule_value").getAsString();
-        String ruleItemName = itemObject.get("rule_name").getAsString();
-        String ruleItemConfigJson;
-
-        if (ruleItemConfigLoader != null) {
-            ruleItemConfigJson = ruleItemConfigLoader.load(ruleItemConfigId);
-        } else {
-            ruleItemConfigJson = itemObject.get("operator").getAsString();
-        }
+        String ruleItemName     = itemObject.get("rule_name").getAsString();
+        String ruleItemConfigJson = (ruleItemConfigLoader != null)
+                ? ruleItemConfigLoader.load(ruleItemConfigId)
+                : itemObject.get("operator").getAsString();
 
         JsonObject ruleItemJsonObject = new Gson().fromJson(ruleItemConfigJson, JsonObject.class);
 
-        ValueLoader leftValueLoader = this.getValueFromValueLoader(
+        ValueLoader leftValueLoader  = this.getValueFromValueLoader(
                 ruleItemJsonObject.get("left_value_loader").getAsString(),
                 ruleItemJsonObject.get("left_value").getAsString());
         ValueLoader rightValueLoader = this.getValueFromValueLoader(
                 ruleItemJsonObject.get("right_value_loader").getAsString(),
                 ruleItemJsonObject.get("right_value").getAsString());
 
-        boolean isPreviewMode = ruleItemJsonObject.has("preview_mode") && ruleItemJsonObject.get("preview_mode").getAsBoolean();
+        boolean isPreviewMode   = ruleItemJsonObject.has("preview_mode")    && ruleItemJsonObject.get("preview_mode").getAsBoolean();
         boolean isBoolCondition = ruleItemJsonObject.has("is_bool_condition") && ruleItemJsonObject.get("is_bool_condition").getAsBoolean();
 
         Operator.Comparator compare = this.parseComparator(ruleItemJsonObject.get("comparator").getAsString());
@@ -282,38 +246,30 @@ public class RuleEngine {
         return ruleItem;
     }
 
-    private RuleExpression parseAndExpressionFromJsonObject(JsonObject itemObject, RuleItemConfigLoader ruleItemConfigLoader)
+    private RuleExpression parseAndExpressionFromJsonObject(JsonObject itemObject, RuleItemConfigLoader loader)
             throws ClassNotFoundException, NotSupportedException {
-
-        JsonArray andRulesJsonArray = itemObject.getAsJsonArray("and");
-        RuleExpression andRuleExpression = this.parseItemsFromJsonObject(andRulesJsonArray, AndRuleExpression.class, ruleItemConfigLoader);
-
+        RuleExpression andExpr = this.parseItemsFromJsonObject(
+                itemObject.getAsJsonArray("and"), AndRuleExpression.class, loader);
         if (itemObject.has("and_flow")) {
-            JsonArray ruleItemJsonArray = itemObject.getAsJsonArray("and_flow");
-            RuleExpression secondAndRuleExpression = parseItemsFromJsonObject(ruleItemJsonArray, AndRuleExpression.class, ruleItemConfigLoader);
-            andRuleExpression.add(secondAndRuleExpression);
+            andExpr.add(parseItemsFromJsonObject(itemObject.getAsJsonArray("and_flow"), AndRuleExpression.class, loader));
         }
-
-        return andRuleExpression;
+        return andExpr;
     }
 
-    private RuleExpression parseOrExpressionFromJsonObject(JsonObject itemObject, RuleItemConfigLoader ruleItemConfigLoader)
+    private RuleExpression parseOrExpressionFromJsonObject(JsonObject itemObject, RuleItemConfigLoader loader)
             throws ClassNotFoundException, NotSupportedException {
-
-        JsonArray orRulesJsonArray = itemObject.getAsJsonArray("or");
-        RuleExpression orRuleExpression = this.parseItemsFromJsonObject(orRulesJsonArray, OrRuleExpression.class, ruleItemConfigLoader);
-
+        RuleExpression orExpr = this.parseItemsFromJsonObject(
+                itemObject.getAsJsonArray("or"), OrRuleExpression.class, loader);
         if (itemObject.has("and_flow")) {
-            JsonArray ruleItemJsonArray = itemObject.getAsJsonArray("and_flow");
-            RuleExpression secondAndRuleExpression = parseItemsFromJsonObject(ruleItemJsonArray, AndRuleExpression.class, ruleItemConfigLoader);
-            orRuleExpression.add(secondAndRuleExpression);
+            RuleExpression secondAnd = parseItemsFromJsonObject(
+                    itemObject.getAsJsonArray("and_flow"), AndRuleExpression.class, loader);
+            orExpr.add(secondAnd);
             return new AndRuleExpression() {{
-                add(orRuleExpression);
-                add(secondAndRuleExpression);
+                add(orExpr);
+                add(secondAnd);
             }};
-        } else {
-            return orRuleExpression;
         }
+        return orExpr;
     }
 
     protected ValueLoader getValueFromValueLoader(String loaderStr, String valueString) throws ClassNotFoundException {
@@ -330,30 +286,20 @@ public class RuleEngine {
     }
 
     protected Operator.Comparator parseComparator(String comparator) throws NotSupportedException {
-        String c = comparator.trim().replace(" ", "");
-        switch (c) {
-            case ">":               return Operator.Comparator.GREATER_THAN;
-            case "<":               return Operator.Comparator.LESS_THAN;
-            case "=":               return Operator.Comparator.EQUAL;
-            case "!=":              return Operator.Comparator.NOTEQUAL;
-            case "exactcontains":   return Operator.Comparator.CONTAINS;
-            case "contains":        return Operator.Comparator.CONTAINS_ANY;
-            case "notcontains":     return Operator.Comparator.NOTCONTAINS_ANY;
-            case "exactnotcontains":return Operator.Comparator.NOTCONTAINS;
-            default:
-                throw new NotSupportedException("Unsupported comparator: " + comparator);
+        switch (comparator.trim().replace(" ", "")) {
+            case ">":                return Operator.Comparator.GREATER_THAN;
+            case "<":                return Operator.Comparator.LESS_THAN;
+            case "=":                return Operator.Comparator.EQUAL;
+            case "!=":               return Operator.Comparator.NOTEQUAL;
+            case "exactcontains":    return Operator.Comparator.CONTAINS;
+            case "contains":         return Operator.Comparator.CONTAINS_ANY;
+            case "notcontains":      return Operator.Comparator.NOTCONTAINS_ANY;
+            case "exactnotcontains": return Operator.Comparator.NOTCONTAINS;
+            default: throw new NotSupportedException("Unsupported comparator: " + comparator);
         }
     }
 
-    public Map<String, RuleItem> getAllRules() {
-        return this.ruleItems;
-    }
-
-    public ValueHandler getValueHandler() {
-        return valueHandler;
-    }
-
-    public void setValueHandler(ValueHandler handler) {
-        this.valueHandler = handler;
-    }
+    public Map<String, RuleItem> getAllRules() { return this.ruleItems; }
+    public ValueHandler getValueHandler() { return valueHandler; }
+    public void setValueHandler(ValueHandler handler) { this.valueHandler = handler; }
 }

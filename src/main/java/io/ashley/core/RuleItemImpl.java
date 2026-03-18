@@ -2,8 +2,6 @@ package io.ashley.core;
 
 import io.ashley.rule.RuleApplyingException;
 import io.ashley.rule.RuleEngine;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -13,21 +11,17 @@ public class RuleItemImpl implements RuleItem, RuleExecutable {
     private boolean hasPassed = false;
     private Operator operator = null;
     private boolean hasApplied = false;
-
-    @Setter
     private boolean isPreviewMode = false;
-
     private boolean isBoolCondition = false;
 
-    @Getter
     private String name;
     private RuleEngine ruleEngine;
-
-    @Setter
-    @Getter
     private Map<String, Object> additionalParams = new HashMap<>();
-
     private RuleResult ruleResult = new RuleResult();
+
+    public String getName() { return name; }
+    public Map<String, Object> getAdditionalParams() { return additionalParams; }
+    public void setAdditionalParams(Map<String, Object> additionalParams) { this.additionalParams = additionalParams; }
 
     public RuleItemImpl(Operator operator, String name, RuleEngine engine, Map<String, Object> additionalParams) {
         this.operator = operator;
@@ -118,18 +112,13 @@ public class RuleItemImpl implements RuleItem, RuleExecutable {
     }
 
     @Override
-    public Map<String, Object> getAdditionalParams() {
-        return this.additionalParams;
-    }
-
-    @Override
     public RuleResult getRuleResult() {
         this.ruleResult.type = RuleResult.TYPE_RULE;
         this.ruleResult.ruleName = this.name;
         try {
-            this.ruleResult.extraInfo.put("leftValue", this.operator.leftValue.getString());
-            this.ruleResult.extraInfo.put("rightValue", this.operator.rightValue.getString());
-            this.ruleResult.extraInfo.put("compare", this.operator.compare.name());
+            this.ruleResult.extraInfo.put("leftValue",       this.operator.leftValue.getString());
+            this.ruleResult.extraInfo.put("rightValue",      this.operator.rightValue.getString());
+            this.ruleResult.extraInfo.put("compare",         this.operator.compare.name());
             this.ruleResult.extraInfo.put("isBoolCondition", this.isBoolCondition ? "Yes" : "No");
             for (String k : this.additionalParams.keySet()) {
                 this.ruleResult.extraInfo.put(k, this.additionalParams.get(k).toString());
